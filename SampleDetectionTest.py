@@ -2,44 +2,50 @@ import cv2
 import numpy as np
 
 src = cv2.imread(r"images\1.jpg")
-red = True
 if src is None:
     print("Error: image not loaded")
 
-cv2.imshow("Src", src)
+# cv2.imshow("Src", src)
 
-hsv = cv2.cvtColor(src, cv2.COLOR_BGR2HSV)
+rotated = cv2.rotate(src, cv2.ROTATE_180)
 
-if red:
-    thresh1 = cv2.inRange(hsv, (0, 40, 20), (10, 255, 255))
-    thresh2 = cv2.inRange(hsv, (150, 40, 20), (180, 255, 255))
-    hsvThresh = cv2.bitwise_or(thresh1, thresh2)
-else:
-    hsvThresh = cv2.inRange(hsv, (80, 40, 20), (140, 255,255))
-
-masked = cv2.bitwise_and(src, src, mask=hsvThresh)
+hsv = cv2.cvtColor(rotated, cv2.COLOR_BGR2HSV)
 
 #dilation
 dilationElement = cv2.getStructuringElement(cv2.MORPH_RECT, (10, 10))
-dilated = cv2.dilate(src, dilationElement)
+dilated = cv2.dilate(rotated, dilationElement)
 # cv2.imshow("dilated", dilated)
 
 # erosion
-element = cv2.getStructuringElement(cv2.MORPH_RECT, (10, 10))
+erosionElement = cv2.getStructuringElement(cv2.MORPH_RECT, (10, 10))
 
-eroded = cv2.erode(src, element)
+# eroded = cv2.erode(src, element)
 # cv2.imshow("Eroded", eroded)
 
-edges = cv2.Canny(src, 100, 200)
-cv2.imshow("edges", edges)
+# edges = cv2.Canny(src, 100, 200)
+# cv2.imshow("edges", edges)
 
-dilatedEroded = cv2.erode(dilated, element)
+dilatedEroded = cv2.erode(dilated, erosionElement)
 cv2.imshow("Both", dilatedEroded)
 
-dilatedErodedEdges = cv2.Canny(dilatedEroded, 100, 200)
-cv2.imshow("new edges", dilatedErodedEdges)
+color = 2 # 0 for red, 1 for yellow, 2 for blue
 
-contours, hierarchy = cv2.findContours(dilatedErodedEdges, cv2.RETR_LIST, cv2.CHAIN_APPROX_NONE)
+if color is 0:
+    thresh1 = cv2.inRange(hsv, (0, 60, 20), (10, 255, 255))
+    thresh2 = cv2.inRange(hsv, (150, 60, 20), (180, 255, 255))
+    hsvThresh = cv2.bitwise_or(thresh1, thresh2)
+elif color is 1:
+    hsvThresh = cv2.inRange(hsv, (10, 100, 20), (70, 255, 255))
+else:
+    hsvThresh = cv2.inRange(hsv, (80, 110, 20), (140, 255,255))
+
+masked = cv2.bitwise_and(dilatedEroded, dilatedEroded, mask=hsvThresh)
+cv2.imshow("masked", masked)
+
+edges = cv2.Canny(masked, 100, 200)
+cv2.imshow("new edges", edges)
+
+contours, hierarchy = cv2.findContours(edges, cv2.RETR_LIST, cv2.CHAIN_APPROX_NONE)
 contourImage = np.zeros_like(src)
 cv2.drawContours(contourImage, contours, -1, (0, 255, 0), 2)
 cv2.imshow("new contours", contourImage)
