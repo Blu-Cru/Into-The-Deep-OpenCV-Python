@@ -1,10 +1,12 @@
 import cv2
+import numpy as np
 
 src = cv2.imread(r"images\1.jpg")
-src = cv2.rotate(src, cv2.ROTATE_180)
 red = True
 if src is None:
     print("Error: image not loaded")
+
+cv2.imshow("Src", src)
 
 hsv = cv2.cvtColor(src, cv2.COLOR_BGR2HSV)
 
@@ -17,7 +19,30 @@ else:
 
 masked = cv2.bitwise_and(src, src, mask=hsvThresh)
 
-cv2.imshow("Out", masked)
+#dilation
+dilationElement = cv2.getStructuringElement(cv2.MORPH_RECT, (10, 10))
+dilated = cv2.dilate(src, dilationElement)
+# cv2.imshow("dilated", dilated)
+
+# erosion
+element = cv2.getStructuringElement(cv2.MORPH_RECT, (10, 10))
+
+eroded = cv2.erode(src, element)
+# cv2.imshow("Eroded", eroded)
+
+edges = cv2.Canny(src, 100, 200)
+cv2.imshow("edges", edges)
+
+dilatedEroded = cv2.erode(dilated, element)
+cv2.imshow("Both", dilatedEroded)
+
+dilatedErodedEdges = cv2.Canny(dilatedEroded, 100, 200)
+cv2.imshow("new edges", dilatedErodedEdges)
+
+contours, hierarchy = cv2.findContours(dilatedErodedEdges, cv2.RETR_LIST, cv2.CHAIN_APPROX_NONE)
+contourImage = np.zeros_like(src)
+cv2.drawContours(contourImage, contours, -1, (0, 255, 0), 2)
+cv2.imshow("new contours", contourImage)
 
 cv2.waitKey(0)
 
