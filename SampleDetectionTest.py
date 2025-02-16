@@ -1,12 +1,11 @@
 import cv2
 
-image = cv2.imread(r"C:\Users\kevin\Documents\GitHub\6417-Into-The-Deep-OpenCV\KELP1217.jpg")
+src = cv2.imread(r"images\1.jpg")
 red = True
-if image is None:
+if src is None:
     print("Error: image not loaded")
 
-imSmall = cv2.resize(image, (600, 800))
-hsv = cv2.cvtColor(imSmall, cv2.COLOR_BGR2HSV)
+hsv = cv2.cvtColor(src, cv2.COLOR_BGR2HSV)
 
 if red:
     thresh1 = cv2.inRange(hsv, (0, 40, 20), (20, 255, 255))
@@ -15,7 +14,9 @@ if red:
 else:
     hsvThresh = cv2.inRange(hsv, (80, 40, 20), (140, 255,255))
 
-cv2.imshow("hsv", hsvThresh)
+masked = cv2.bitwise_and(src, src, hsvThresh)
+
+cv2.imshow("Out", hsvThresh)
 
 cv2.waitKey(0)
 
