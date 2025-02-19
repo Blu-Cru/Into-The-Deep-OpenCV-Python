@@ -8,7 +8,8 @@ def main():
 
     show("Src", src)
 
-    hsv = cv2.cvtColor(src, cv2.COLOR_BGR2HSV)
+    # hsv = cv2.cvtColor(src, cv2.COLOR_BGR2HSV)
+    lab = cv2.cvtColor(src, cv2.COLOR_BGR2LAB)
 
     #dilation
     # dilationElement = cv2.getStructuringElement(cv2.MORPH_RECT, (10, 10))
@@ -24,14 +25,14 @@ def main():
     color = 1 # 0 for red, 1 for yellow, 2 for blue
 
     if color == 0:
-        thresh1 = cv2.inRange(hsv, (0, 60, 20), (15, 255, 255))
-        thresh2 = cv2.inRange(hsv, (150, 60, 20), (180, 255, 255))
-        hsvThresh = cv2.bitwise_or(thresh1, thresh2)
+        hsvThresh = cv2.inRange(lab, (0, 145, 0), (255, 255, 180))
+        # thresh1 = cv2.inRange(lab, (0, 60, 20), (15, 255, 255))
+        # thresh2 = cv2.inRange(lab, (150, 60, 20), (180, 255, 255))
+        # hsvThresh = cv2.bitwise_or(thresh1, thresh2)
     elif color == 1:
-        hsvThresh = cv2.inRange(hsv, (15, 100, 20), (70, 255, 255))
+        hsvThresh = cv2.inRange(lab, (15, 100, 20), (70, 255, 255))
     else:
-        hsvThresh = cv2.inRange(hsv, (80, 40, 20), (150, 255,255))
-
+        hsvThresh = cv2.inRange(lab, (80, 40, 20), (150, 255,255))
 
     masked = cv2.bitwise_and(src, src, mask=hsvThresh)
     show("masked", masked)
@@ -43,12 +44,12 @@ def main():
     equalized = clahe.apply(gray)
 
     edges = cv2.Canny(equalized, 50, 100)
-    show("new edges", edges)
+    # show("new edges", edges)
 
     contours, hierarchy = cv2.findContours(edges, cv2.RETR_LIST, cv2.CHAIN_APPROX_NONE)
     contourImage = np.zeros_like(src)
     cv2.drawContours(contourImage, contours, -1, (0, 255, 0), 2)
-    show("new contours", contourImage)
+    # show("new contours", contourImage)
 
     cv2.waitKey(0)
 
