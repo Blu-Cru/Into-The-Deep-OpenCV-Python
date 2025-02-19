@@ -30,11 +30,11 @@ cv2.imshow("Both", dilatedEroded)
 
 color = 2 # 0 for red, 1 for yellow, 2 for blue
 
-if color is 0:
+if color == 0:
     thresh1 = cv2.inRange(hsv, (0, 60, 20), (10, 255, 255))
     thresh2 = cv2.inRange(hsv, (150, 60, 20), (180, 255, 255))
     hsvThresh = cv2.bitwise_or(thresh1, thresh2)
-elif color is 1:
+elif color == 1:
     hsvThresh = cv2.inRange(hsv, (10, 100, 20), (70, 255, 255))
 else:
     hsvThresh = cv2.inRange(hsv, (80, 110, 20), (140, 255,255))
