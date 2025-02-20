@@ -9,7 +9,7 @@ def main():
     show("Src", src)
 
     undistorted = undistort(src)
-    show("undistorted", undistorted)
+    # show("undistorted", undistorted)
 
     wbCorrected = gray_world_white_balance(undistorted)
 
@@ -23,16 +23,16 @@ def main():
     # dilatedEroded = cv2.erode(dilated, erosionElement)
     # show("Both", dilated)
 
-    color = 2 # 0 for red, 1 for yellow, 2 for blue
+    color = 1 # 0 for red, 1 for yellow, 2 for blue
 
     if color == 0:
         thresh1 = cv2.inRange(hsv, (0, 60, 20), (15, 255, 255))
         thresh2 = cv2.inRange(hsv, (150, 60, 20), (180, 255, 255))
         hsvThresh = cv2.bitwise_or(thresh1, thresh2)
     elif color == 1:
-        hsvThresh = cv2.inRange(hsv, (15, 100, 20), (70, 255, 255))
+        hsvThresh = cv2.inRange(hsv, (10, 25, 60), (60, 255, 255))
     else:
-        hsvThresh = cv2.inRange(hsv, (80, 100, 20), (150, 255,255))
+        hsvThresh = cv2.inRange(hsv, (80, 80, 20), (150, 255,255))
 
     masked = cv2.bitwise_and(wbCorrected, wbCorrected, mask=hsvThresh)
     show("masked", masked)
@@ -52,7 +52,7 @@ def main():
     # edges = cv2.Canny(equalized, 80, 100)
     # show("equalized edges", edges)
 
-    blurredEdges = cv2.Canny(blurred, 20, 100)
+    blurredEdges = cv2.Canny(blurred, 40, 100)
     show("Blurred edges", blurredEdges)
     
     # dilation
