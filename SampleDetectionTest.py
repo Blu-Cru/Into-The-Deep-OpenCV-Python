@@ -23,10 +23,10 @@ def main():
     # dilatedEroded = cv2.erode(dilated, erosionElement)
     # show("Both", dilated)
 
-    color = 1 # 0 for red, 1 for yellow, 2 for blue
+    color = 0 # 0 for red, 1 for yellow, 2 for blue
 
     if color == 0:
-        thresh1 = cv2.inRange(hsv, (0, 60, 20), (15, 255, 255))
+        thresh1 = cv2.inRange(hsv, (0, 60, 20), (10, 255, 255))
         thresh2 = cv2.inRange(hsv, (150, 60, 20), (180, 255, 255))
         hsvThresh = cv2.bitwise_or(thresh1, thresh2)
     elif color == 1:
@@ -37,7 +37,7 @@ def main():
     masked = cv2.bitwise_and(wbCorrected, wbCorrected, mask=hsvThresh)
     show("masked", masked)
 
-    blurred = cv2.GaussianBlur(masked, (5, 5), 1)
+    blurred = cv2.GaussianBlur(wbCorrected, (5, 5), 1)
     show("blurred", blurred)
 
     # B, G, R = cv2.split(blurred)
@@ -52,15 +52,21 @@ def main():
     # edges = cv2.Canny(equalized, 80, 100)
     # show("equalized edges", edges)
 
-    blurredEdges = cv2.Canny(blurred, 40, 100)
+    blurredEdges = cv2.Canny(blurred, 50, 100)
     show("Blurred edges", blurredEdges)
     
     # dilation
-    dilationElement = cv2.getStructuringElement(cv2.MORPH_RECT, (10, 10))
+    dilationElement = cv2.getStructuringElement(cv2.MORPH_RECT, (7, 7))
     dilated = cv2.dilate(blurredEdges, dilationElement)
     show("dilated", dilated)
 
     contours, hierarchy = cv2.findContours(dilated, cv2.RETR_LIST, cv2.CHAIN_APPROX_NONE)
+
+    # i = contours.len()
+    # for cnt in contours:
+    #     if cv2.contourArea(cnt) < 10:
+    #         contours.remove(cnt)
+            
     contourImage = np.zeros_like(src)
     cv2.drawContours(contourImage, contours, -1, (0, 255, 0), 2)
     show("new contours", contourImage)
