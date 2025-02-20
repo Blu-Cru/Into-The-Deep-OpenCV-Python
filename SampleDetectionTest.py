@@ -32,7 +32,7 @@ def main():
     elif color == 1:
         hsvThresh = cv2.inRange(hsv, (15, 100, 20), (70, 255, 255))
     else:
-        hsvThresh = cv2.inRange(hsv, (80, 40, 20), (150, 255,255))
+        hsvThresh = cv2.inRange(hsv, (80, 100, 20), (150, 255,255))
 
     masked = cv2.bitwise_and(wbCorrected, wbCorrected, mask=hsvThresh)
     show("masked", masked)
