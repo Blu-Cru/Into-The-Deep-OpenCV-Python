@@ -1,5 +1,9 @@
 import cv2
 import numpy as np
+import math
+
+# 2.9 * 10-6 m per pixel
+#
 
 def main():
     src = cv2.imread(r"images\1.jpg")
@@ -16,6 +20,24 @@ def main():
     show("Img corrected", wbCorrected)
 
     hsv = cv2.cvtColor(wbCorrected, cv2.COLOR_BGR2HSV)
+
+    shape = wbCorrected.shape
+
+    calib = np.matrix([[1279.33, 0, 958.363], [0, 1279.33, 492.062], [0,0,1]])
+    exR = getExtrinsicRotation(math.radians(60), 0, 0)
+    trans = np.array([-shape[0]/2, -shape[1]/2, 1000])
+    extrinsic = np.matrix([
+        [exR[0,0], exR[0,1], trans[0]], 
+        [exR[1, 0], exR[1,1], trans[1]], 
+        [exR[2, 0], exR[2, 1], trans[2]]
+    ])
+    # print(calib)
+    # print(exR)
+    # print(extrinsic)
+    H = calib.__mul__(extrinsic)
+    # print(H)
+    transformed = cv2.warpPerspective(wbCorrected, H, (shape[1], shape[0]))
+    show("transformed", transformed)
 
     # erosion
     # erosionElement = cv2.getStructuringElement(cv2.MORPH_RECT, (10, 10))
@@ -35,10 +57,10 @@ def main():
         hsvThresh = cv2.inRange(hsv, (80, 80, 20), (150, 255,255))
 
     masked = cv2.bitwise_and(wbCorrected, wbCorrected, mask=hsvThresh)
-    show("masked", masked)
+    # show("masked", masked)
 
     blurred = cv2.GaussianBlur(wbCorrected, (5, 5), 1)
-    show("blurred", blurred)
+    # show("blurred", blurred)
 
     # B, G, R = cv2.split(blurred)
     # clahe = cv2.createCLAHE(clipLimit=3.0, tileGridSize=(8, 8))
@@ -53,12 +75,12 @@ def main():
     # show("equalized edges", edges)
 
     blurredEdges = cv2.Canny(blurred, 50, 100)
-    show("Blurred edges", blurredEdges)
+    # show("Blurred edges", blurredEdges)
     
     # dilation
     dilationElement = cv2.getStructuringElement(cv2.MORPH_RECT, (7, 7))
     dilated = cv2.dilate(blurredEdges, dilationElement)
-    show("dilated", dilated)
+    # show("dilated", dilated)
 
     contours, hierarchy = cv2.findContours(dilated, cv2.RETR_LIST, cv2.CHAIN_APPROX_NONE)
 
@@ -69,7 +91,7 @@ def main():
             
     contourImage = np.zeros_like(src)
     cv2.drawContours(contourImage, contours, -1, (0, 255, 0), 2)
-    show("new contours", contourImage)
+    # show("new contours", contourImage)
 
     cv2.waitKey(0)
 
@@ -115,5 +137,12 @@ def gray_world_white_balance(img):
     img[:, :, 2] = np.clip(img[:, :, 2] * scale_r, 0, 255)
 
     return img
+
+def getExtrinsicRotation(yaw, pitch, roll):
+    return np.matrix([
+        [math.cos(pitch)*math.cos(roll), math.sin(yaw)*math.sin(pitch)*math.cos(roll)-math.cos(yaw)*math.sin(roll), math.cos(yaw)*math.sin(pitch)*math.cos(roll)+math.sin(yaw)*math.sin(roll)],
+        [math.cos(pitch)*math.sin(roll), math.sin(yaw)*math.sin(pitch)*math.sin(roll)+math.cos(yaw)*math.cos(roll), math.cos(yaw)*math.sin(pitch)*math.sin(roll)+math.sin(yaw)*math.cos(roll)],
+        [-math.sin(pitch), math.sin(yaw)*math.cos(pitch), math.cos(yaw)*math.cos(pitch)]
+    ])
 
 main()
