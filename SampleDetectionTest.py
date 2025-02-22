@@ -6,7 +6,7 @@ import math
 #
 
 def main():
-    src = cv2.imread(r"images\1.jpg")
+    src = cv2.imread(r"images\8.jpg")
     if src is None:
         print("Error: image not loaded")
         
@@ -24,12 +24,28 @@ def main():
     shape = wbCorrected.shape
 
     calib = np.matrix([[1279.33, 0, 958.363], [0, 1279.33, 492.062], [0,0,1]])
-    exR = getExtrinsicRotation(math.radians(60), 0, 0)
-    trans = np.array([-shape[0]/2, -shape[1]/2, 1000])
+
+    pitch_deg = -25
+
+    pitch_rad = np.deg2rad(pitch_deg)
+
+    # Compute cosine and sine
+    cy = np.cos(pitch_rad)
+    sy = np.sin(pitch_rad)
+
+    # Rotation about y-axis by -25 degrees
+    R = np.array([
+        [ cy,  0.0,  sy ],
+        [ 0.0, 1.0,  0.0],
+        [-sy,  0.0,  cy ]
+    ])
+
+    # exR = getExtrinsicRotation(math.radians(-15), 0, 0)
+    trans = np.array([-shape[0]/2, -shape[1]/2, 12*1279.33])
     extrinsic = np.matrix([
-        [exR[0,0], exR[0,1], trans[0]], 
-        [exR[1, 0], exR[1,1], trans[1]], 
-        [exR[2, 0], exR[2, 1], trans[2]]
+        [R[0,0], R[0,1], trans[0]], 
+        [R[1, 0], R[1,1], trans[1]], 
+        [R[2, 0], R[2, 1], trans[2]]
     ])
     # print(calib)
     # print(exR)

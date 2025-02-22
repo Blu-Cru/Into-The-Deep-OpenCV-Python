@@ -1,0 +1,49 @@
+import cv2
+import numpy as np
+import math
+
+def main():
+    src = cv2.imread(r"images\8.jpg")
+    if src is None:
+        print("Error: image not loaded")
+        
+    show("Src", src)
+
+    undistorted = undistort(src)
+    show("Undistorted", undistorted)
+
+    K = np.matrix([
+        [1279.33,       0, 958.363], 
+        [      0, 1279.33, 492.062], 
+        [      0,       0,       1]
+    ])
+
+
+
+    cv2.waitKey(0)
+
+    cv2.destroyAllWindows()
+    
+def undistort(img):
+    h, w = img.shape[:2]
+
+    cameraMatrix = np.array([[1279.33,   0, 958.363], 
+                             [  0, 1279.33, 492.062], 
+                             [  0,   0,   1]], dtype=np.float64)
+    
+    distCoeffs = np.array([-0.448017, 0.245668, -0.000901464, 0.000996399], dtype=np.float64)
+
+    newCameraMatrix, roi = cv2.getOptimalNewCameraMatrix(
+        cameraMatrix, 
+        distCoeffs, 
+        (w, h), 
+        alpha=1, 
+        newImgSize=(w, h)
+    )
+
+    return cv2.undistort(img, cameraMatrix, distCoeffs, None, newCameraMatrix)
+    
+def show(str, mat):
+    cv2.imshow(str, cv2.resize(mat, (960, 540)))
+
+main()
