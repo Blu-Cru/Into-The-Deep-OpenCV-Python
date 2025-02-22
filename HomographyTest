@@ -20,33 +20,64 @@ def main():
 
 
     # 2) Get the rotation for pitch=-25 deg, yaw=0, roll=0
-    pitch_deg = -25.0
-    R = compute_rotation_matrix_pitch_yaw_roll(pitch_deg, 0.0, 0.0)
+    pitch_deg = -65.0
+    R1 = compute_rotation_matrix_pitch_yaw_roll(pitch_deg, 0.0, 0.0)
+    R2 = compute_rotation_matrix_pitch_yaw_roll(0.0, pitch_deg, 0.0)
+    R3 = compute_rotation_matrix_pitch_yaw_roll(0.0, 0.0, pitch_deg)
 
     # 3) Assume the camera is located at (0, 0, 322) in the WORLD frame
     #    i.e., 322 mm above the plane z=0.
-    camera_center = np.array([0.0, 0.0, 322.0])
+    camera_center = np.array([0.0, 0.0, 12.6 - 1.5])
 
     # 4) Compute the homography H
-    H = compute_homography(K, R, camera_center)
+    H1 = compute_homography(K, R1, camera_center)
+    H2 = compute_homography(K, R2, camera_center)
+    H3 = compute_homography(K, R3, camera_center)
 
     print("Intrinsic matrix K:\n", K)
-    print("\nRotation matrix R (pitch=-25°, yaw=0°, roll=0°):\n", R)
+    print("\nRotation matrix R (pitch=-25°, yaw=0°, roll=0°):\n", R3)
     print("\nCamera center:\n", camera_center)
-    print("\nHomography H:\n", H)
-    
+    print("\nHomography H:\n", H3)
+
+    inv = np.linalg.inv(H3)
+    print("Inv", inv)
 
     # 5) Apply H to some example points on the ground plane
     points_on_plane = np.array([
-        [  0.0,   0.0],   # the origin
-        [100.0,   0.0],
-        [100.0, 100.0],
-        [  0.0, 100.0],
+        [  4.0,   13.0],   # the origin
+        [4.0,   18.0],
+        [-3.5, 18.0],
+        [  -4.0, 13.0],
+        [-9.5, 18.0]
     ])
-    image_points = apply_homography(H, points_on_plane)
+    print("points on plane:\n", points_on_plane)
 
-    # Print out the resulting pixel coordinates
-    print("Projected image points:\n", image_points)
+    # image_points1 = apply_homography(H1, points_on_plane)
+    # image_points2 = apply_homography(H2, points_on_plane)
+    image_points3 = apply_homography(H3, points_on_plane)
+
+    # # Print out the resulting pixel coordinates
+    # print("H1\nProjected image points:\n", image_points1)
+    # print("H2\nProjected image points:\n", image_points2)
+    print("H3\nProjected image points:\n", image_points3)
+    list_of_tuples = list(map(tuple, image_points3))
+
+    clean_list = []
+
+    for item in list_of_tuples:
+        # item is (matrix([[x, y]]),)
+        mat = item[0]      # 'mat' is a numpy.matrix of shape (1, 2)
+        arr = np.asarray(mat)   # convert to a standard array, shape (1,2)
+        # now extract x, y
+        x, y = arr[0, 0], arr[0, 1]
+        clean_list.append((x, y))
+
+    # Now 'clean_list' is a list of (x, y) tuples
+    for (x, y) in clean_list:
+        print(x, y)
+        cv2.circle(undistorted, (int(x), int(y)), 5, (0, 0, 255), -1)
+
+    show("Points", undistorted)
 
     # -------------------------------------------------------
     # 5) Define a rectangle on the plane that we want to view
@@ -55,14 +86,14 @@ def main():
     #    you can pick any region you like.
     # -------------------------------------------------------
     plane_corners = np.array([
-        [0.0,   0.0],
-        [400.0, 0.0],
-        [400.0, 400.0],
-        [0.0,   400.0]
+        [20.0,   35.0],
+        [-20.0, 35.0],
+        [-20.0, 10.0],
+        [20.0,   10.0]
     ], dtype=np.float32)
 
     # Project these plane corners into the image via H
-    image_corners = apply_homography(H, plane_corners)
+    image_corners = apply_homography(H3, plane_corners)
 
     # -------------------------------------------------------
     # 6) Specify the “destination” corners in the top-down view.
@@ -81,8 +112,9 @@ def main():
     # -------------------------------------------------------
     M = cv2.getPerspectiveTransform(image_corners.astype(np.float32),
                                     top_down_corners.astype(np.float32))
+    print("M", M)
 
-    top_down_size = (400, 400)  # (width, height)
+    top_down_size = (600, 400)  # (width, height)
     top_down_view = cv2.warpPerspective(undistorted, M, top_down_size)
 
     # -------------------------------------------------------
