@@ -23,7 +23,7 @@ def main():
     pitch_deg = -65.0
     R1 = compute_rotation_matrix_pitch_yaw_roll(pitch_deg, 0.0, 0.0)
     R2 = compute_rotation_matrix_pitch_yaw_roll(0.0, pitch_deg, 0.0)
-    R3 = compute_rotation_matrix_pitch_yaw_roll(0.0, 0.0, pitch_deg)
+    R3 = compute_rotation_matrix_pitch_yaw_roll(0.0, 3.0, pitch_deg)
 
     # 3) Assume the camera is located at (0, 0, 322) in the WORLD frame
     #    i.e., 322 mm above the plane z=0.
@@ -39,16 +39,13 @@ def main():
     print("\nCamera center:\n", camera_center)
     print("\nHomography H:\n", H3)
 
-    inv = np.linalg.inv(H3)
-    print("Inv", inv)
-
     # 5) Apply H to some example points on the ground plane
     points_on_plane = np.array([
         [  4.0,   13.0],   # the origin
         [4.0,   18.0],
-        [-3.5, 18.0],
+        [-4.0, 18.0],
         [  -4.0, 13.0],
-        [-9.5, 18.0]
+        [-10.0, 18.0]
     ])
     print("points on plane:\n", points_on_plane)
 
@@ -102,9 +99,9 @@ def main():
     # -------------------------------------------------------
     top_down_corners = np.array([
         [0.0,   0.0],
-        [400.0, 0.0],
-        [400.0, 400.0],
-        [0.0,   400.0]
+        [600.0, 0.0],
+        [600.0, 600.0],
+        [0.0,   600.0]
     ], dtype=np.float32)
 
     # -------------------------------------------------------
@@ -114,7 +111,7 @@ def main():
                                     top_down_corners.astype(np.float32))
     print("M", M)
 
-    top_down_size = (600, 400)  # (width, height)
+    top_down_size = (600, 600)  # (width, height)
     top_down_view = cv2.warpPerspective(undistorted, M, top_down_size)
 
     # -------------------------------------------------------

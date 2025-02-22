@@ -23,7 +23,11 @@ def main():
 
     shape = wbCorrected.shape
 
-    calib = np.matrix([[1279.33, 0, 958.363], [0, 1279.33, 492.062], [0,0,1]])
+    K = np.matrix([
+        [1279.33, 0, 958.363], 
+        [0, 1279.33, 492.062], 
+        [0,0,1]
+    ])
 
     pitch_deg = -25
 
@@ -41,7 +45,7 @@ def main():
     ])
 
     # exR = getExtrinsicRotation(math.radians(-15), 0, 0)
-    trans = np.array([-shape[0]/2, -shape[1]/2, 12*1279.33])
+    trans = np.array([0.0, 0.0, 12.6 - 1.5])
     extrinsic = np.matrix([
         [R[0,0], R[0,1], trans[0]], 
         [R[1, 0], R[1,1], trans[1]], 
@@ -50,7 +54,7 @@ def main():
     # print(calib)
     # print(exR)
     # print(extrinsic)
-    H = calib.__mul__(extrinsic)
+    H = K.__mul__(extrinsic)
     # print(H)
     transformed = cv2.warpPerspective(wbCorrected, H, (shape[1], shape[0]))
     show("transformed", transformed)
@@ -160,5 +164,25 @@ def getExtrinsicRotation(yaw, pitch, roll):
         [math.cos(pitch)*math.sin(roll), math.sin(yaw)*math.sin(pitch)*math.sin(roll)+math.cos(yaw)*math.cos(roll), math.cos(yaw)*math.sin(pitch)*math.sin(roll)+math.sin(yaw)*math.cos(roll)],
         [-math.sin(pitch), math.sin(yaw)*math.cos(pitch), math.cos(yaw)*math.cos(pitch)]
     ])
+
+def compute_homography(K, R, camera_center):
+    """
+    Computes the 3x3 homography H that maps a point (X, Y, 1) on the z=0 plane
+    in the world frame to the image plane, given K, R, and camera_center in world coords.
+    """
+    # camera_center is a 3D vector [Cx, Cy, Cz] in the world frame
+    # translation (in the camera’s extrinsic) is t = -R @ C
+    t = -R @ camera_center
+    
+    # Extract r1 and r2 (the first two columns of R),
+    # then form a 3x3 by [r1, r2, t]
+    r1 = R[:, 0]
+    r2 = R[:, 1]
+    # Stack them side by side into a 3x3
+    R_2cols_t = np.column_stack((r1, r2, t))
+    
+    # Finally multiply by K to get the homography
+    H = K @ R_2cols_t
+    return H
 
 main()
