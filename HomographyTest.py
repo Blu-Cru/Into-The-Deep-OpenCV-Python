@@ -3,7 +3,7 @@ import numpy as np
 import math
 
 def main():
-    src = cv2.imread(r"images\8.jpg")
+    src = cv2.imread(r"images\chart\1.jpg")
     if src is None:
         print("Error: image not loaded")
         
@@ -18,107 +18,140 @@ def main():
         [      0,       0,       1]
     ])
 
+    img_points = [
+        (895, 607), (1155, 602),
+        (870, 810), (1207, 805)
+    ]
 
-    # 2) Get the rotation for pitch=-25 deg, yaw=0, roll=0
-    pitch_deg = -65.0
-    R1 = compute_rotation_matrix_pitch_yaw_roll(pitch_deg, 0.0, 0.0)
-    R2 = compute_rotation_matrix_pitch_yaw_roll(0.0, pitch_deg, 0.0)
-    R3 = compute_rotation_matrix_pitch_yaw_roll(0.0, 3.0, pitch_deg)
+    top_down_points = [
+        (800, 600), (1050, 600),
+        (800, 850), (1050, 850)
+    ]
 
-    # 3) Assume the camera is located at (0, 0, 322) in the WORLD frame
-    #    i.e., 322 mm above the plane z=0.
-    camera_center = np.array([0.0, 0.0, 12.6 - 1.5])
+    points = undistorted.copy()
 
-    # 4) Compute the homography H
-    H1 = compute_homography(K, R1, camera_center)
-    H2 = compute_homography(K, R2, camera_center)
-    H3 = compute_homography(K, R3, camera_center)
+    for (x, y) in img_points:
+            print(x, y)
+            cv2.circle(points, (int(x), int(y)), 5, (0, 0, 255), -1)
+            
+    show("Points", points)
 
-    print("Intrinsic matrix K:\n", K)
-    print("\nRotation matrix R (pitch=-25°, yaw=0°, roll=0°):\n", R3)
-    print("\nCamera center:\n", camera_center)
-    print("\nHomography H:\n", H3)
-
-    # 5) Apply H to some example points on the ground plane
-    points_on_plane = np.array([
-        [  4.0,   13.0],   # the origin
-        [4.0,   18.0],
-        [-4.0, 18.0],
-        [  -4.0, 13.0],
-        [-10.0, 18.0]
-    ])
-    print("points on plane:\n", points_on_plane)
-
-    # image_points1 = apply_homography(H1, points_on_plane)
-    # image_points2 = apply_homography(H2, points_on_plane)
-    image_points3 = apply_homography(H3, points_on_plane)
-
-    # # Print out the resulting pixel coordinates
-    # print("H1\nProjected image points:\n", image_points1)
-    # print("H2\nProjected image points:\n", image_points2)
-    print("H3\nProjected image points:\n", image_points3)
-    list_of_tuples = list(map(tuple, image_points3))
-
-    clean_list = []
-
-    for item in list_of_tuples:
-        # item is (matrix([[x, y]]),)
-        mat = item[0]      # 'mat' is a numpy.matrix of shape (1, 2)
-        arr = np.asarray(mat)   # convert to a standard array, shape (1,2)
-        # now extract x, y
-        x, y = arr[0, 0], arr[0, 1]
-        clean_list.append((x, y))
-
-    # Now 'clean_list' is a list of (x, y) tuples
-    for (x, y) in clean_list:
-        print(x, y)
-        cv2.circle(undistorted, (int(x), int(y)), 5, (0, 0, 255), -1)
-
-    show("Points", undistorted)
-
-    # -------------------------------------------------------
-    # 5) Define a rectangle on the plane that we want to view
-    #    in top-down coordinates. Example: 400mm x 400mm area.
-    #    We’ll assume (0,0) is directly under the camera, but
-    #    you can pick any region you like.
-    # -------------------------------------------------------
-    plane_corners = np.array([
-        [20.0,   35.0],
-        [-20.0, 35.0],
-        [-20.0, 10.0],
-        [20.0,   10.0]
-    ], dtype=np.float32)
-
-    # Project these plane corners into the image via H
-    image_corners = apply_homography(H3, plane_corners)
-
-    # -------------------------------------------------------
-    # 6) Specify the “destination” corners in the top-down view.
-    #    For a 1 pixel/mm mapping, we can make the output
-    #    image 400 x 400 pixels.
-    # -------------------------------------------------------
-    top_down_corners = np.array([
-        [0.0,   0.0],
-        [600.0, 0.0],
-        [600.0, 600.0],
-        [0.0,   600.0]
-    ], dtype=np.float32)
-
-    # -------------------------------------------------------
-    # 7) Use OpenCV to get a perspective transform and warp
-    # -------------------------------------------------------
-    M = cv2.getPerspectiveTransform(image_corners.astype(np.float32),
-                                    top_down_corners.astype(np.float32))
-    print("M", M)
-
-    top_down_size = (600, 600)  # (width, height)
+    np_img_points = np.float32([[895, 607], [1155, 602],
+        [870, 810], [1207, 805]])
+    np_top_down_points = np.float32([[800, 600], [1000, 600],
+        [800, 800], [1000, 800]])
+    
+    M = cv2.getPerspectiveTransform(np_img_points,
+                                    np_top_down_points)
+    
+    top_down_size = (1920, 1080)  # (width, height)
     top_down_view = cv2.warpPerspective(undistorted, M, top_down_size)
 
     # -------------------------------------------------------
     # 8) Save or display the result
     # -------------------------------------------------------
-    cv2.imwrite("top_down_result.jpg", top_down_view)
-    cv2.imshow("Top-Down View", top_down_view)
+    show("Top-Down View", top_down_view)
+
+    # # 2) Get the rotation for pitch=-25 deg, yaw=0, roll=0
+    # pitch_deg = -65.0
+    # R1 = compute_rotation_matrix_pitch_yaw_roll(pitch_deg, 0.0, 0.0)
+    # R2 = compute_rotation_matrix_pitch_yaw_roll(0.0, pitch_deg, 0.0)
+    # R3 = compute_rotation_matrix_pitch_yaw_roll(0.0, 3.0, pitch_deg)
+
+    # # 3) Assume the camera is located at (0, 0, 322) in the WORLD frame
+    # #    i.e., 322 mm above the plane z=0.
+    # camera_center = np.array([0.0, 0.0, 12.6 - 1.5])
+
+    # # 4) Compute the homography H
+    # H1 = compute_homography(K, R1, camera_center)
+    # H2 = compute_homography(K, R2, camera_center)
+    # H3 = compute_homography(K, R3, camera_center)
+
+    # print("Intrinsic matrix K:\n", K)
+    # print("\nRotation matrix R (pitch=-25°, yaw=0°, roll=0°):\n", R3)
+    # print("\nCamera center:\n", camera_center)
+    # print("\nHomography H:\n", H3)
+
+    # # 5) Apply H to some example points on the ground plane
+    # points_on_plane = np.array([
+    #     [  4.0,   13.0],   # the origin
+    #     [4.0,   18.0],
+    #     [-4.0, 18.0],
+    #     [  -4.0, 13.0],
+    #     [-10.0, 18.0]
+    # ])
+    # print("points on plane:\n", points_on_plane)
+
+    # # image_points1 = apply_homography(H1, points_on_plane)
+    # # image_points2 = apply_homography(H2, points_on_plane)
+    # image_points3 = apply_homography(H3, points_on_plane)
+
+    # # # Print out the resulting pixel coordinates
+    # # print("H1\nProjected image points:\n", image_points1)
+    # # print("H2\nProjected image points:\n", image_points2)
+    # print("H3\nProjected image points:\n", image_points3)
+    # list_of_tuples = list(map(tuple, image_points3))
+
+    # clean_list = []
+
+    # for item in list_of_tuples:
+    #     # item is (matrix([[x, y]]),)
+    #     mat = item[0]      # 'mat' is a numpy.matrix of shape (1, 2)
+    #     arr = np.asarray(mat)   # convert to a standard array, shape (1,2)
+    #     # now extract x, y
+    #     x, y = arr[0, 0], arr[0, 1]
+    #     clean_list.append((x, y))
+
+    # # Now 'clean_list' is a list of (x, y) tuples
+    # for (x, y) in clean_list:
+    #     print(x, y)
+    #     cv2.circle(undistorted, (int(x), int(y)), 5, (0, 0, 255), -1)
+
+    # show("Points", undistorted)
+
+    # # -------------------------------------------------------
+    # # 5) Define a rectangle on the plane that we want to view
+    # #    in top-down coordinates. Example: 400mm x 400mm area.
+    # #    We’ll assume (0,0) is directly under the camera, but
+    # #    you can pick any region you like.
+    # # -------------------------------------------------------
+    # plane_corners = np.array([
+    #     [20.0,   35.0],
+    #     [-20.0, 35.0],
+    #     [-20.0, 10.0],
+    #     [20.0,   10.0]
+    # ], dtype=np.float32)
+
+    # # Project these plane corners into the image via H
+    # image_corners = apply_homography(H3, plane_corners)
+
+    # # -------------------------------------------------------
+    # # 6) Specify the “destination” corners in the top-down view.
+    # #    For a 1 pixel/mm mapping, we can make the output
+    # #    image 400 x 400 pixels.
+    # # -------------------------------------------------------
+    # top_down_corners = np.array([
+    #     [0.0,   0.0],
+    #     [600.0, 0.0],
+    #     [600.0, 600.0],
+    #     [0.0,   600.0]
+    # ], dtype=np.float32)
+
+    # # -------------------------------------------------------
+    # # 7) Use OpenCV to get a perspective transform and warp
+    # # -------------------------------------------------------
+    # M = cv2.getPerspectiveTransform(image_corners.astype(np.float32),
+    #                                 top_down_corners.astype(np.float32))
+    # print("M", M)
+
+    # top_down_size = (600, 600)  # (width, height)
+    # top_down_view = cv2.warpPerspective(undistorted, M, top_down_size)
+
+    # # -------------------------------------------------------
+    # # 8) Save or display the result
+    # # -------------------------------------------------------
+    # cv2.imwrite("top_down_result.jpg", top_down_view)
+    # cv2.imshow("Top-Down View", top_down_view)
 
     cv2.waitKey(0)
 
