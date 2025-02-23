@@ -44,6 +44,7 @@ def main():
     M = cv2.getPerspectiveTransform(np_img_points,
                                     np_top_down_points)
     
+    # each inch is 40 pixels
     top_down_size = (1920, 1080)  # (width, height)
     top_down_view = cv2.warpPerspective(undistorted, M, top_down_size)
 
