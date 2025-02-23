@@ -23,11 +23,6 @@ def main():
         (870, 810), (1207, 805)
     ]
 
-    top_down_points = [
-        (800, 600), (1050, 600),
-        (800, 850), (1050, 850)
-    ]
-
     points = undistorted.copy()
 
     for (x, y) in img_points:

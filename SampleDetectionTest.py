@@ -6,7 +6,7 @@ import math
 #
 
 def main():
-    src = cv2.imread(r"images\8.jpg")
+    src = cv2.imread(r"images\chart\1.jpg")
     if src is None:
         print("Error: image not loaded")
         
@@ -19,51 +19,10 @@ def main():
 
     show("Img corrected", wbCorrected)
 
-    hsv = cv2.cvtColor(wbCorrected, cv2.COLOR_BGR2HSV)
+    # homography
+    transformed = doHomographyTransform(wbCorrected)
 
-    shape = wbCorrected.shape
-
-    K = np.matrix([
-        [1279.33, 0, 958.363], 
-        [0, 1279.33, 492.062], 
-        [0,0,1]
-    ])
-
-    pitch_deg = -25
-
-    pitch_rad = np.deg2rad(pitch_deg)
-
-    # Compute cosine and sine
-    cy = np.cos(pitch_rad)
-    sy = np.sin(pitch_rad)
-
-    # Rotation about y-axis by -25 degrees
-    R = np.array([
-        [ cy,  0.0,  sy ],
-        [ 0.0, 1.0,  0.0],
-        [-sy,  0.0,  cy ]
-    ])
-
-    # exR = getExtrinsicRotation(math.radians(-15), 0, 0)
-    trans = np.array([0.0, 0.0, 12.6 - 1.5])
-    extrinsic = np.matrix([
-        [R[0,0], R[0,1], trans[0]], 
-        [R[1, 0], R[1,1], trans[1]], 
-        [R[2, 0], R[2, 1], trans[2]]
-    ])
-    # print(calib)
-    # print(exR)
-    # print(extrinsic)
-    H = K.__mul__(extrinsic)
-    # print(H)
-    transformed = cv2.warpPerspective(wbCorrected, H, (shape[1], shape[0]))
-    show("transformed", transformed)
-
-    # erosion
-    # erosionElement = cv2.getStructuringElement(cv2.MORPH_RECT, (10, 10))
-
-    # dilatedEroded = cv2.erode(dilated, erosionElement)
-    # show("Both", dilated)
+    hsv = cv2.cvtColor(transformed, cv2.COLOR_BGR2HSV)
 
     color = 0 # 0 for red, 1 for yellow, 2 for blue
 
@@ -76,10 +35,10 @@ def main():
     else:
         hsvThresh = cv2.inRange(hsv, (80, 80, 20), (150, 255,255))
 
-    masked = cv2.bitwise_and(wbCorrected, wbCorrected, mask=hsvThresh)
+    masked = cv2.bitwise_and(transformed, transformed, mask=hsvThresh)
     # show("masked", masked)
 
-    blurred = cv2.GaussianBlur(wbCorrected, (5, 5), 1)
+    blurred = cv2.GaussianBlur(transformed, (5, 5), 1)
     # show("blurred", blurred)
 
     # B, G, R = cv2.split(blurred)
@@ -94,24 +53,54 @@ def main():
     # edges = cv2.Canny(equalized, 80, 100)
     # show("equalized edges", edges)
 
-    blurredEdges = cv2.Canny(blurred, 50, 100)
-    # show("Blurred edges", blurredEdges)
+    blurredEdges = cv2.Canny(blurred, 20, 80)
+    show("Blurred edges", blurredEdges)
     
     # dilation
     dilationElement = cv2.getStructuringElement(cv2.MORPH_RECT, (7, 7))
     dilated = cv2.dilate(blurredEdges, dilationElement)
-    # show("dilated", dilated)
+    show("dilated", dilated)
+    
+    # erosion
+    # erosionElement = cv2.getStructuringElement(cv2.MORPH_RECT, (5, 5))
+    # eroded = cv2.erode(dilated, erosionElement)
+    # show("Eroded", eroded)
 
     contours, hierarchy = cv2.findContours(dilated, cv2.RETR_LIST, cv2.CHAIN_APPROX_NONE)
 
-    # i = contours.len()
-    # for cnt in contours:
-    #     if cv2.contourArea(cnt) < 10:
-    #         contours.remove(cnt)
-            
     contourImage = np.zeros_like(src)
     cv2.drawContours(contourImage, contours, -1, (0, 255, 0), 2)
-    # show("new contours", contourImage)
+
+    rectImage = transformed.copy()
+
+    validContours = []
+    for cnt in contours:
+        area = cv2.contourArea(cnt)
+        if area < 3000.0 or area > 10000.0:
+            continue
+
+        rect = cv2.minAreaRect(cnt)
+
+        (width, height) = rect[1]
+
+        # Check to avoid division by zero
+        if width == 0 or height == 0:
+            continue
+
+        # Calculate the aspect ratio using the longer side divided by the shorter side
+        ratio = max(width, height) / min(width, height)
+
+        if ratio < 2.0 or ratio > 3.0:
+            continue
+
+        box = cv2.boxPoints(rect)
+        box = np.int0(box)
+        cv2.drawContours(rectImage, [box], 0, (0,255, 0), 2)
+
+        validContours.append(cnt)
+            
+    show("new contours", contourImage)
+    show("Rects", rectImage)
 
     cv2.waitKey(0)
 
@@ -157,6 +146,37 @@ def gray_world_white_balance(img):
     img[:, :, 2] = np.clip(img[:, :, 2] * scale_r, 0, 255)
 
     return img
+
+def doHomographyTransform(src):
+    img_points = [
+        (895, 607), (1155, 602),
+        (870, 810), (1207, 805)
+    ]
+
+    points = src.copy()
+
+    for (x, y) in img_points:
+            print(x, y)
+            cv2.circle(points, (int(x), int(y)), 5, (0, 0, 255), -1)
+    show("Points", points)
+
+    np_img_points = np.float32([[895, 607], [1155, 602],
+        [870, 810], [1207, 805]])
+    np_top_down_points = np.float32([[800, 600], [1000, 600],
+        [800, 800], [1000, 800]])
+    
+    M = cv2.getPerspectiveTransform(np_img_points,
+                                    np_top_down_points)
+    
+    # each inch is 40 pixels
+    top_down_size = (1920, 1080)  # (width, height)
+    top_down_view = cv2.warpPerspective(src, M, top_down_size)
+
+    # -------------------------------------------------------
+    # 8) Save or display the result
+    # -------------------------------------------------------
+    show("Top-Down View", top_down_view)
+    return top_down_view
 
 def getExtrinsicRotation(yaw, pitch, roll):
     return np.matrix([
