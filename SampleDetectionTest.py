@@ -93,8 +93,18 @@ def main():
         if ratio < 2.0 or ratio > 3.0:
             continue
 
+        # Approximate the contour
+        epsilon = 0.02 * cv2.arcLength(cnt, True)
+        approx = cv2.approxPolyDP(cnt, epsilon, True)
+        
+        # if len(approx) > 7:
+        #     continue
+
+        # Print the number of sides
+        print(f'Contour with {len(approx)} sides')
+
         box = cv2.boxPoints(rect)
-        box = np.int0(box)
+        box = np.int64(box)
         cv2.drawContours(rectImage, [box], 0, (0,255, 0), 2)
 
         validContours.append(cnt)
