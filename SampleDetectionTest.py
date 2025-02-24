@@ -4,6 +4,9 @@ import math
 
 # 2.9 * 10-6 m per pixel
 #
+PIXELS_PER_INCH = 40
+REF_CENTER_PIXELS = [800, 800]
+REF_CENTER_INCHES = [-6.0, 13.0]
 
 def main():
     src = cv2.imread(r"images\chart\1.jpg")
@@ -53,7 +56,7 @@ def main():
     # edges = cv2.Canny(equalized, 80, 100)
     # show("equalized edges", edges)
 
-    blurredEdges = cv2.Canny(blurred, 20, 80)
+    blurredEdges = cv2.Canny(transformed, 50, 100)
     show("Blurred edges", blurredEdges)
     
     # dilation
@@ -76,7 +79,7 @@ def main():
     validContours = []
     for cnt in contours:
         area = cv2.contourArea(cnt)
-        if area < 3000.0 or area > 10000.0:
+        if area < 3000.0 or area > 7000.0:
             continue
 
         rect = cv2.minAreaRect(cnt)
@@ -97,8 +100,11 @@ def main():
         epsilon = 0.02 * cv2.arcLength(cnt, True)
         approx = cv2.approxPolyDP(cnt, epsilon, True)
         
-        # if len(approx) > 7:
-        #     continue
+        if len(approx) > 7:
+            continue
+        
+        (centerx, centery) = rect[0]
+        print(f'Contour with center at {getRealWorldCoords(centerx, centery)}')
 
         # Print the number of sides
         print(f'Contour with {len(approx)} sides')
@@ -111,6 +117,10 @@ def main():
             
     show("new contours", contourImage)
     show("Rects", rectImage)
+
+    threshContours = []
+    # for cnt in validContours:
+
 
     cv2.waitKey(0)
 
@@ -172,8 +182,8 @@ def doHomographyTransform(src):
 
     np_img_points = np.float32([[895, 607], [1155, 602],
         [870, 810], [1207, 805]])
-    np_top_down_points = np.float32([[800, 600], [1000, 600],
-        [800, 800], [1000, 800]])
+    np_top_down_points = np.float32([[800, 800-PIXELS_PER_INCH * 5], [800+PIXELS_PER_INCH*5, 800-PIXELS_PER_INCH*5],
+        [800, 800], [800+PIXELS_PER_INCH*5, 800]])
     
     M = cv2.getPerspectiveTransform(np_img_points,
                                     np_top_down_points)
@@ -214,5 +224,13 @@ def compute_homography(K, R, camera_center):
     # Finally multiply by K to get the homography
     H = K @ R_2cols_t
     return H
+
+def getRealWorldCoords(centerx, centery):
+    refOffsetX = centerx-REF_CENTER_PIXELS[0]
+    refOffsetY = -(centery-REF_CENTER_PIXELS[1])
+
+    inchOffsetX = REF_CENTER_INCHES[0]+refOffsetX/PIXELS_PER_INCH
+    inchOffsetY = REF_CENTER_INCHES[1]+refOffsetY/PIXELS_PER_INCH
+    return (inchOffsetX, inchOffsetY)
 
 main()
