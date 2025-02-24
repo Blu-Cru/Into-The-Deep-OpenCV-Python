@@ -85,25 +85,25 @@ def main():
     # # # Print out the resulting pixel coordinates
     # # print("H1\nProjected image points:\n", image_points1)
     # # print("H2\nProjected image points:\n", image_points2)
-    # print("H3\nProjected image points:\n", image_points3)
-    # list_of_tuples = list(map(tuple, image_points3))
+    print("H3\nProjected image points:\n", image_points3)
+    list_of_tuples = list(map(tuple, image_points3))
 
-    # clean_list = []
+    clean_list = []
 
-    # for item in list_of_tuples:
-    #     # item is (matrix([[x, y]]),)
-    #     mat = item[0]      # 'mat' is a numpy.matrix of shape (1, 2)
-    #     arr = np.asarray(mat)   # convert to a standard array, shape (1,2)
-    #     # now extract x, y
-    #     x, y = arr[0, 0], arr[0, 1]
-    #     clean_list.append((x, y))
+    for item in list_of_tuples:
+        # item is (matrix([[x, y]]),)
+        mat = item[0]      # 'mat' is a numpy.matrix of shape (1, 2)
+        arr = np.asarray(mat)   # convert to a standard array, shape (1,2)
+        # now extract x, y
+        x, y = arr[0, 0], arr[0, 1]
+        clean_list.append((x, y))
 
-    # # Now 'clean_list' is a list of (x, y) tuples
-    # for (x, y) in clean_list:
-    #     print(x, y)
-    #     cv2.circle(undistorted, (int(x), int(y)), 5, (0, 0, 255), -1)
+    # Now 'clean_list' is a list of (x, y) tuples
+    for (x, y) in clean_list:
+        print(x, y)
+        cv2.circle(undistorted, (int(x), int(y)), 5, (0, 0, 255), -1)
 
-    # show("Points", undistorted)
+    show("Points", undistorted)
 
     # # -------------------------------------------------------
     # # 5) Define a rectangle on the plane that we want to view

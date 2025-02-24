@@ -7,6 +7,10 @@ import math
 PIXELS_PER_INCH = 40
 REF_CENTER_PIXELS = [800, 800]
 REF_CENTER_INCHES = [-6.0, 13.0]
+REAL_ROI_X = [-13, 13]
+REAL_ROI_Y = [8, 24]
+np_img_points = np.float32([[895, 607], [1155, 602],
+    [870, 810], [1207, 805]])
 
 def main():
     src = cv2.imread(r"images\chart\1.jpg")
@@ -84,7 +88,9 @@ def main():
 
         rect = cv2.minAreaRect(cnt)
 
+        (centerx, centery) = rect[0]
         (width, height) = rect[1]
+        angle = rect[2]
 
         # Check to avoid division by zero
         if width == 0 or height == 0:
@@ -102,9 +108,18 @@ def main():
         
         if len(approx) > 7:
             continue
+
+        (centerx, centery) = getRealWorldCoords(centerx, centery)
+        if centerx > REAL_ROI_X[1] or centerx < REAL_ROI_X[0] or centery > REAL_ROI_Y[1] or centery < REAL_ROI_Y[0]:
+            continue
         
-        (centerx, centery) = rect[0]
-        print(f'Contour with center at {getRealWorldCoords(centerx, centery)}')
+        if height > width:
+            angle = 90-angle
+        else:
+            angle = -angle
+        print(f'Contour with angle {angle}')
+        print(f'Contour with width, height of {(width, height)}')
+        print(f'Contour with center at {(centerx, centery)}')
 
         # Print the number of sides
         print(f'Contour with {len(approx)} sides')
@@ -168,22 +183,20 @@ def gray_world_white_balance(img):
     return img
 
 def doHomographyTransform(src):
-    img_points = [
-        (895, 607), (1155, 602),
-        (870, 810), (1207, 805)
-    ]
+    imgPoints = []
+    for point in np.ndarray.tolist(np_img_points):
+        imgPoints.append((point[0], point[1]))
+    print(imgPoints)
 
     points = src.copy()
 
-    for (x, y) in img_points:
+    for (x, y) in imgPoints:
             print(x, y)
             cv2.circle(points, (int(x), int(y)), 5, (0, 0, 255), -1)
     show("Points", points)
 
-    np_img_points = np.float32([[895, 607], [1155, 602],
-        [870, 810], [1207, 805]])
-    np_top_down_points = np.float32([[800, 800-PIXELS_PER_INCH * 5], [800+PIXELS_PER_INCH*5, 800-PIXELS_PER_INCH*5],
-        [800, 800], [800+PIXELS_PER_INCH*5, 800]])
+    np_top_down_points = np.float32([[REF_CENTER_PIXELS[0], REF_CENTER_PIXELS[1]-PIXELS_PER_INCH * 5], [REF_CENTER_PIXELS[0]+PIXELS_PER_INCH*5, REF_CENTER_PIXELS[1]-PIXELS_PER_INCH*5],
+        [REF_CENTER_PIXELS[0], REF_CENTER_PIXELS[1]], [REF_CENTER_PIXELS[0]+PIXELS_PER_INCH*5, REF_CENTER_PIXELS[1]]])
     
     M = cv2.getPerspectiveTransform(np_img_points,
                                     np_top_down_points)
