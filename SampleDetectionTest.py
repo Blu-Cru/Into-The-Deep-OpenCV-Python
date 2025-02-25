@@ -31,6 +31,16 @@ def main():
 
     hsv = cv2.cvtColor(transformed, cv2.COLOR_BGR2HSV)
 
+    h, s, v = cv2.split(hsv)
+
+    blurredH = cv2.GaussianBlur(h, (5, 5), 1)
+
+    show("Hue", h)
+    show("Blurred Hue", blurredH)
+
+    saturationThresh = cv2.inRange(hsv, (0, 45, 40), (255, 255, 255))
+    satMasked = cv2.bitwise_and(transformed, transformed, mask=saturationThresh)
+    show("Saturation masked", satMasked)
     color = 0 # 0 for red, 1 for yellow, 2 for blue
 
     if color == 0:
@@ -60,12 +70,18 @@ def main():
     # edges = cv2.Canny(equalized, 80, 100)
     # show("equalized edges", edges)
 
-    blurredEdges = cv2.Canny(transformed, 50, 100)
+    satEdges = cv2.Canny(satMasked, 100, 200)
+    show("BlurredSat edges", satEdges)
+
+    blurredEdges = cv2.Canny(transformed, 40, 100)
     show("Blurred edges", blurredEdges)
+
+    combinedEdges = cv2.bitwise_or(satEdges, blurredEdges)
+    show("Combined edges", combinedEdges)
     
     # dilation
-    dilationElement = cv2.getStructuringElement(cv2.MORPH_RECT, (7, 7))
-    dilated = cv2.dilate(blurredEdges, dilationElement)
+    dilationElement = cv2.getStructuringElement(cv2.MORPH_RECT, (5, 5))
+    dilated = cv2.dilate(combinedEdges, dilationElement)
     show("dilated", dilated)
     
     # erosion
@@ -110,8 +126,8 @@ def main():
         #     continue
 
         (centerx, centery) = getRealWorldCoords(centerx, centery)
-        if centerx > REAL_ROI_X[1] or centerx < REAL_ROI_X[0] or centery > REAL_ROI_Y[1] or centery < REAL_ROI_Y[0]:
-            continue
+        # if centerx > REAL_ROI_X[1] or centerx < REAL_ROI_X[0] or centery > REAL_ROI_Y[1] or centery < REAL_ROI_Y[0]:
+        #     continue
         
         if height > width:
             angle = 90-angle
