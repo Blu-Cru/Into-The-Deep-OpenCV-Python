@@ -106,8 +106,8 @@ def main():
         epsilon = 0.02 * cv2.arcLength(cnt, True)
         approx = cv2.approxPolyDP(cnt, epsilon, True)
         
-        if len(approx) > 7:
-            continue
+        # if len(approx) > 7:
+        #     continue
 
         (centerx, centery) = getRealWorldCoords(centerx, centery)
         if centerx > REAL_ROI_X[1] or centerx < REAL_ROI_X[0] or centery > REAL_ROI_Y[1] or centery < REAL_ROI_Y[0]:
