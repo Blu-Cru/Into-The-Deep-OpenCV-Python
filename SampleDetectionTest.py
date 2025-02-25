@@ -30,13 +30,8 @@ def main():
     transformed = doHomographyTransform(wbCorrected)
 
     hsv = cv2.cvtColor(transformed, cv2.COLOR_BGR2HSV)
-
-    h, s, v = cv2.split(hsv)
-
-    blurredH = cv2.GaussianBlur(h, (5, 5), 1)
-
-    show("Hue", h)
-    show("Blurred Hue", blurredH)
+    # show("Hue", h)
+    # show("Blurred Hue", blurredH)
 
     saturationThresh = cv2.inRange(hsv, (0, 45, 40), (255, 255, 255))
     satMasked = cv2.bitwise_and(transformed, transformed, mask=saturationThresh)
@@ -93,6 +88,17 @@ def main():
 
     contourImage = np.zeros_like(src)
     cv2.drawContours(contourImage, contours, -1, (0, 255, 0), 2)
+
+    # allRectImage = transformed.copy()
+    
+    # for cnt in contours:
+    #     rect = cv2.minAreaRect(cnt)
+
+    #     box = cv2.boxPoints(rect)
+    #     box = np.int64(box)
+    #     cv2.drawContours(allRectImage, [box], 0, (0,255, 0), 2)
+
+    # show("All Rects", allRectImage)
 
     rectImage = transformed.copy()
 
