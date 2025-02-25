@@ -36,6 +36,8 @@ def main():
     # homography
     transformed = doHomographyTransform(wbCorrected)
 
+    transformed = cv2.resize(transformed, (960, 540))
+
     hsv = cv2.cvtColor(transformed, cv2.COLOR_BGR2HSV)
     # show("Hue", h)
     # show("Blurred Hue", blurredH)
@@ -81,7 +83,7 @@ def main():
     show("Combined edges", combinedEdges)
     
     # dilation
-    dilationElement = cv2.getStructuringElement(cv2.MORPH_RECT, (5, 5))
+    dilationElement = cv2.getStructuringElement(cv2.MORPH_RECT, (2, 2))
     dilated = cv2.dilate(combinedEdges, dilationElement)
     show("dilated", dilated)
     
@@ -92,8 +94,8 @@ def main():
 
     contours, hierarchy = cv2.findContours(dilated, cv2.RETR_LIST, cv2.CHAIN_APPROX_NONE)
 
-    contourImage = np.zeros_like(src)
-    cv2.drawContours(contourImage, contours, -1, (0, 255, 0), 2)
+    contourImage = np.zeros_like(transformed)
+    cv2.drawContours(contourImage, contours, -1, (0, 255, 0), 1)
 
     # allRectImage = transformed.copy()
     
@@ -111,7 +113,7 @@ def main():
     validContours = []
     for cnt in contours:
         area = cv2.contourArea(cnt)
-        if area < 3000.0 or area > 7000.0:
+        if area < 750.0 or area > 1750.0:
             continue
 
         rect = cv2.minAreaRect(cnt)
