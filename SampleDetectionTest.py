@@ -11,6 +11,13 @@ REAL_ROI_X = [-13, 13]
 REAL_ROI_Y = [8, 24]
 np_img_points = np.float32([[895, 607], [1155, 602],
     [870, 810], [1207, 805]])
+ALLIANCE = 1
+RED_HUE_LOW = 150.0
+RED_HUE_HIGH = 12.0
+YELLOW_HUE_LOW = 12.0
+YELLOW_HUE_HIGH = 55.0
+BLUE_HUE_LOW = 80.0
+BLUE_HUE_HIGH = 150.0
 
 def main():
     src = cv2.imread(r"images\chart\1.jpg")
@@ -36,13 +43,12 @@ def main():
     saturationThresh = cv2.inRange(hsv, (0, 45, 40), (255, 255, 255))
     satMasked = cv2.bitwise_and(transformed, transformed, mask=saturationThresh)
     show("Saturation masked", satMasked)
-    color = 0 # 0 for red, 1 for yellow, 2 for blue
 
-    if color == 0:
+    if ALLIANCE == 0:
         thresh1 = cv2.inRange(hsv, (0, 60, 20), (10, 255, 255))
         thresh2 = cv2.inRange(hsv, (150, 60, 20), (180, 255, 255))
         hsvThresh = cv2.bitwise_or(thresh1, thresh2)
-    elif color == 1:
+    elif ALLIANCE == 1:
         hsvThresh = cv2.inRange(hsv, (10, 25, 60), (60, 255, 255))
     else:
         hsvThresh = cv2.inRange(hsv, (80, 80, 20), (150, 255,255))
@@ -127,9 +133,6 @@ def main():
         # Approximate the contour
         epsilon = 0.02 * cv2.arcLength(cnt, True)
         approx = cv2.approxPolyDP(cnt, epsilon, True)
-        
-        # if len(approx) > 7:
-        #     continue
 
         (centerx, centery) = getRealWorldCoords(centerx, centery)
         # if centerx > REAL_ROI_X[1] or centerx < REAL_ROI_X[0] or centery > REAL_ROI_Y[1] or centery < REAL_ROI_Y[0]:
@@ -139,6 +142,37 @@ def main():
             angle = 90-angle
         else:
             angle = -angle
+
+        saturation = hsv[:, :, 1]  # Extract the saturation channel
+        hue = hsv[:,:,0]
+
+        # Define the four points of the rotated rectangle
+        pts = cv2.boxPoints(rect)
+        # pts = np.array([[x1, y1], [x2, y2], [x3, y3], [x4, y4]], dtype=np.int32)
+
+        # Create a mask
+        mask = np.zeros_like(saturation, dtype=np.uint8)
+        cv2.fillPoly(mask, [pts.astype(np.int32)], 255)  # Fill the polygon
+
+        # Compute the mean saturation within the mask
+        mean_saturation = cv2.mean(saturation, mask=mask)[0]
+        print(f'Contour mean saturation {mean_saturation}')
+        # if mean_saturation < 40.0:
+        #     continue
+        mean_hue = cv2.mean(hue, mask=mask)[0]
+        print(f'Contour mean hue {mean_hue}')
+        if ALLIANCE == 0 and (BLUE_HUE_LOW < mean_hue < BLUE_HUE_HIGH):
+            print(f'Contour with hue {mean_hue} discarded!\n')
+            continue
+        elif ALLIANCE == 1 and (mean_hue > RED_HUE_LOW or mean_hue < RED_HUE_HIGH):
+            print(f'Contour with hue {mean_hue} discarded!\n')
+            continue
+
+        # mask = np.zeros_like(transformed)
+        # cv2.drawContours(mask,[cnt],0,255,-1)
+        # pixelpoints = np.transpose(np.nonzero(mask))
+        # print(pixelpoints)
+
         print(f'Contour with angle {angle}')
         print(f'Contour with width, height of {(width, height)}')
         print(f'Contour with center at {(centerx, centery)}')
