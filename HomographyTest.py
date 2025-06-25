@@ -19,8 +19,8 @@ def main():
     ])
 
     img_points = [
-        (895, 607), (1155, 602),
-        (870, 810), (1207, 805)
+        (945, 598), (1168, 600),
+        (931, 774), (1203, 782)
     ]
 
     points = undistorted.copy()
@@ -31,16 +31,16 @@ def main():
             
     show("Points", points)
 
-    np_img_points = np.float32([[895, 607], [1155, 602],
-        [870, 810], [1207, 805]])
-    np_top_down_points = np.float32([[800, 600], [1000, 600],
-        [800, 800], [1000, 800]])
+    np_img_points = np.float32([[945, 598], [1168, 600],
+        [931, 774], [1203, 782]])
+    np_top_down_points = np.float32([[300, 150], [400, 150],
+        [300, 250], [400, 250]])
     
     M = cv2.getPerspectiveTransform(np_img_points,
                                     np_top_down_points)
     
     # each inch is 40 pixels
-    top_down_size = (1920, 1080)  # (width, height)
+    top_down_size = (640, 360)  # (width, height)
     top_down_view = cv2.warpPerspective(undistorted, M, top_down_size)
 
     # -------------------------------------------------------
@@ -243,13 +243,14 @@ def undistort(img):
                              [  0, 1279.33, 492.062], 
                              [  0,   0,   1]], dtype=np.float64)
     
-    distCoeffs = np.array([-0.448017, 0.245668, -0.000901464, 0.000996399], dtype=np.float64)
+    distCoeffs = np.array([-0.448017, 0.245668, -0.000901464, 0.000996399, 0.0], dtype=np.float64)
 
     newCameraMatrix, roi = cv2.getOptimalNewCameraMatrix(
         cameraMatrix, 
         distCoeffs, 
         (w, h), 
-        alpha=1, 
+        (w, h),
+        alpha=1,
         newImgSize=(w, h)
     )
 
