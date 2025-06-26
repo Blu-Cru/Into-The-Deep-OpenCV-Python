@@ -51,10 +51,10 @@ def main():
     satMasked = cv2.bitwise_and(transformed, transformed, mask=saturationThresh)
     show("Saturation masked", satMasked)
 
-    satEdges = cv2.Canny(satMasked,100,200)
+    satEdges = cv2.Canny(satMasked,50,200)
     show("sat edges", satEdges)
 
-    edges = cv2.Canny(wbCorrected,50,100)
+    edges = cv2.Canny(wbCorrected,0,150)
     show("edges", edges)
 
     combinedEdges = cv2.bitwise_or(satEdges,edges)
@@ -135,23 +135,23 @@ def main():
         # pixelpoints = np.transpose(np.nonzero(mask))
         # print(pixelpoints)
 
-        print(f'Contour with angle {angle}')
-        print(f'Contour with width, height of {(width, height)}')
+        # print(f'Contour with angle {angle}')
+        # print(f'Contour with width, height of {(width, height)}')
 
         #get robot point
 
         realPoint = getRealWorldCoords(centerx,centery)
 
 # print sat        
-        cv2.putText(rectImage, f"Sat: {int(meanSat[0])}", tuple(map(int, rect[0])), cv2.FONT_HERSHEY_COMPLEX, 0.6, (0, 255, 0), 2)
+        #cv2.putText(rectImage, f"Sat: {int(meanSat[0])}", tuple(map(int, rect[0])), cv2.FONT_HERSHEY_COMPLEX, 0.6, (0, 255, 0), 2)
         # print hue
-        # cv2.putText(detectionOverlay, f"Hue: {meanHue}", tuple(map(int, rect[0])), cv2.FONT_HERSHEY_COMPLEX, 0.6, (0, 255, 0), 2)
+        cv2.putText(rectImage, f"Hue: {int(meanHue[0])}", tuple(map(int, rect[0])), cv2.FONT_HERSHEY_COMPLEX, 0.6, (0, 255, 0), 2)
         # # print area
         # cv2.putText(detectionOverlay, f"Area: {area}", tuple(map(int, rect[0])), cv2.FONT_HERSHEY_COMPLEX, 0.6, (0, 255, 0), 2)
         # # print ratio
         # cv2.putText(detectionOverlay, f"Ratio: {ratio}", tuple(map(int, rect[0])), cv2.FONT_HERSHEY_COMPLEX, 0.6, (0, 255, 0), 2)
         #     # // print center
-        # cv2.putText(detectionOverlay, f"({int(realPoint[0])}, {int(realPoint[1])}), {angle}", tuple(map(int, rect[0])), cv2.FONT_HERSHEY_COMPLEX, 0.6, (0, 255, 0), 2)
+        #cv2.putText(rectImage, f"({int(realPoint[0])}, {int(realPoint[1])}), {int(angle)}", tuple(map(int, rect[0])), cv2.FONT_HERSHEY_COMPLEX, 0.6, (0, 255, 0), 2)
 
 
         # Print the number of sides
