@@ -4,13 +4,12 @@ import math
 
 # 2.9 * 10-6 m per pixel
 #
-PIXELS_PER_INCH = 40
-REF_CENTER_PIXELS = [800, 800]
-REF_CENTER_INCHES = [-6.0, 13.0]
-REAL_ROI_X = [-13, 13]
-REAL_ROI_Y = [8, 24]
-np_img_points = np.float32([[895, 607], [1155, 602],
-    [870, 810], [1207, 805]])
+PIXELS_PER_INCH = 20
+BOTTOM_LEFT_PIXELS = [800, 800]
+BOTTOM_LEFT_INCHES = [-5.6, 13.0]
+DIST_BETWEEN_POINTS = 5.6
+np_img_points = np.float32([[853, 612], [1201, 612],
+    [812, 947], [1287, 941]])
 ALLIANCE = 1
 RED_HUE_LOW = 150.0
 RED_HUE_HIGH = 12.0
@@ -20,7 +19,7 @@ BLUE_HUE_LOW = 80.0
 BLUE_HUE_HIGH = 150.0
 
 def main():
-    src = cv2.imread(r"images\chart\1.jpg")
+    src = cv2.imread(r"images\6.25\1.jpg")
     if src is None:
         print("Error: image not loaded")
         
@@ -29,89 +28,56 @@ def main():
     undistorted = undistort(src)
     # show("undistorted", undistorted)
 
-    wbCorrected = gray_world_white_balance(undistorted)
+    # homography
+    transformed = doHomographyTransform(undistorted)
+
+    wbCorrected = gray_world_white_balance(transformed)
+
+    
 
     show("Img corrected", wbCorrected)
 
-    # homography
-    transformed = doHomographyTransform(wbCorrected)
 
-    hsv = cv2.cvtColor(transformed, cv2.COLOR_BGR2HSV)
+    hsv = cv2.cvtColor(wbCorrected, cv2.COLOR_BGR2HSV)
     # show("Hue", h)
     # show("Blurred Hue", blurredH)
 
-    saturationThresh = cv2.inRange(hsv, (0, 45, 40), (255, 255, 255))
+    channels = cv2.split(hsv)
+
+    hueChannel = channels[0]
+    satChannel = channels[1]
+
+    saturationThresh = cv2.inRange(hsv, (0, 45, 0), (255, 255, 255))
     satMasked = cv2.bitwise_and(transformed, transformed, mask=saturationThresh)
     show("Saturation masked", satMasked)
 
-    if ALLIANCE == 0:
-        thresh1 = cv2.inRange(hsv, (0, 60, 20), (10, 255, 255))
-        thresh2 = cv2.inRange(hsv, (150, 60, 20), (180, 255, 255))
-        hsvThresh = cv2.bitwise_or(thresh1, thresh2)
-    elif ALLIANCE == 1:
-        hsvThresh = cv2.inRange(hsv, (10, 25, 60), (60, 255, 255))
-    else:
-        hsvThresh = cv2.inRange(hsv, (80, 80, 20), (150, 255,255))
+    satEdges = cv2.Canny(satMasked,100,200)
+    show("sat edges", satEdges)
 
-    masked = cv2.bitwise_and(transformed, transformed, mask=hsvThresh)
-    # show("masked", masked)
+    edges = cv2.Canny(wbCorrected,50,100)
+    show("edges", edges)
 
-    blurred = cv2.GaussianBlur(transformed, (5, 5), 1)
-    # show("blurred", blurred)
+    combinedEdges = cv2.bitwise_or(satEdges,edges)
 
-    # B, G, R = cv2.split(blurred)
-    # clahe = cv2.createCLAHE(clipLimit=3.0, tileGridSize=(8, 8))
-    # B = clahe.apply(B)
-    # G = clahe.apply(G)
-    # R = clahe.apply(R)
-
-    # equalized = cv2.merge((B, G, R))
-    # show("equalized", equalized)
-
-    # edges = cv2.Canny(equalized, 80, 100)
-    # show("equalized edges", edges)
-
-    satEdges = cv2.Canny(satMasked, 100, 200)
-    show("BlurredSat edges", satEdges)
-
-    blurredEdges = cv2.Canny(transformed, 40, 100)
-    show("Blurred edges", blurredEdges)
-
-    combinedEdges = cv2.bitwise_or(satEdges, blurredEdges)
-    show("Combined edges", combinedEdges)
-    
-    # dilation
-    dilationElement = cv2.getStructuringElement(cv2.MORPH_RECT, (5, 5))
+    dilationElement = cv2.getStructuringElement(cv2.MORPH_RECT, (3, 3))
     dilated = cv2.dilate(combinedEdges, dilationElement)
-    show("dilated", dilated)
-    
-    # erosion
-    # erosionElement = cv2.getStructuringElement(cv2.MORPH_RECT, (5, 5))
-    # eroded = cv2.erode(dilated, erosionElement)
-    # show("Eroded", eroded)
+    show("Dilated", dilated)
 
     contours, hierarchy = cv2.findContours(dilated, cv2.RETR_LIST, cv2.CHAIN_APPROX_NONE)
 
-    contourImage = np.zeros_like(src)
-    cv2.drawContours(contourImage, contours, -1, (0, 255, 0), 2)
+    detectionOverlay = wbCorrected.copy()
 
-    # allRectImage = transformed.copy()
-    
-    # for cnt in contours:
-    #     rect = cv2.minAreaRect(cnt)
+    validRects = []
 
-    #     box = cv2.boxPoints(rect)
-    #     box = np.int64(box)
-    #     cv2.drawContours(allRectImage, [box], 0, (0,255, 0), 2)
-
-    # show("All Rects", allRectImage)
+    minDistance = float("inf")
 
     rectImage = transformed.copy()
 
-    validContours = []
+    pose = (0,0,0)
+
     for cnt in contours:
         area = cv2.contourArea(cnt)
-        if area < 3000.0 or area > 7000.0:
+        if area < 900.0 or area > 2400.0:
             continue
 
         rect = cv2.minAreaRect(cnt)
@@ -127,46 +93,42 @@ def main():
         # Calculate the aspect ratio using the longer side divided by the shorter side
         ratio = max(width, height) / min(width, height)
 
-        if ratio < 2.0 or ratio > 3.0:
+        if ratio < 1.6 or ratio > 3.0:
             continue
 
-        # Approximate the contour
-        epsilon = 0.02 * cv2.arcLength(cnt, True)
-        approx = cv2.approxPolyDP(cnt, epsilon, True)
+        pts = cv2.boxPoints(rect)
 
-        (centerx, centery) = getRealWorldCoords(centerx, centery)
-        # if centerx > REAL_ROI_X[1] or centerx < REAL_ROI_X[0] or centery > REAL_ROI_Y[1] or centery < REAL_ROI_Y[0]:
-        #     continue
-        
+        matOfRectPoints = np.array(pts)        
+            
         if height > width:
             angle = 90-angle
         else:
             angle = -angle
 
-        saturation = hsv[:, :, 1]  # Extract the saturation channel
-        hue = hsv[:,:,0]
 
-        # Define the four points of the rotated rectangle
-        pts = cv2.boxPoints(rect)
-        # pts = np.array([[x1, y1], [x2, y2], [x3, y3], [x4, y4]], dtype=np.int32)
+        rotatedRectMask = np.zeros(wbCorrected.shape[:2], dtype=np.uint8)
 
-        # Create a mask
-        mask = np.zeros_like(saturation, dtype=np.uint8)
-        cv2.fillPoly(mask, [pts.astype(np.int32)], 255)  # Fill the polygon
+        cv2.fillConvexPoly(rotatedRectMask, matOfRectPoints.astype(np.int32), 255)
 
-        # Compute the mean saturation within the mask
-        mean_saturation = cv2.mean(saturation, mask=mask)[0]
-        print(f'Contour mean saturation {mean_saturation}')
-        # if mean_saturation < 40.0:
+        meanSat = cv2.mean(satChannel, rotatedRectMask)
+
+        minSat = 70
+
+        if (meanSat[0] < minSat):
+            print(f'Contour with sat {meanSat[0]} discarded!\n')
+            continue
+
+        meanHue = cv2.mean(hueChannel, rotatedRectMask)
+
+
+
+        print(f'Contour mean hue {meanHue}')
+        # if ALLIANCE == 0 and (BLUE_HUE_LOW < meanHue[0] < BLUE_HUE_HIGH):
+        #     print(f'Contour with hue {meanHue[0]} discarded!\n')
         #     continue
-        mean_hue = cv2.mean(hue, mask=mask)[0]
-        print(f'Contour mean hue {mean_hue}')
-        if ALLIANCE == 0 and (BLUE_HUE_LOW < mean_hue < BLUE_HUE_HIGH):
-            print(f'Contour with hue {mean_hue} discarded!\n')
-            continue
-        elif ALLIANCE == 1 and (mean_hue > RED_HUE_LOW or mean_hue < RED_HUE_HIGH):
-            print(f'Contour with hue {mean_hue} discarded!\n')
-            continue
+        # elif ALLIANCE == 1 and (meanHue[0] > RED_HUE_LOW or meanHue[0] < RED_HUE_HIGH):
+        #     print(f'Contour with hue {meanHue[0]} discarded!\n')
+        #     continue
 
         # mask = np.zeros_like(transformed)
         # cv2.drawContours(mask,[cnt],0,255,-1)
@@ -175,19 +137,35 @@ def main():
 
         print(f'Contour with angle {angle}')
         print(f'Contour with width, height of {(width, height)}')
-        print(f'Contour with center at {(centerx, centery)}')
+
+        #get robot point
+
+        realPoint = getRealWorldCoords(centerx,centery)
+
+# print sat        
+        cv2.putText(rectImage, f"Sat: {int(meanSat[0])}", tuple(map(int, rect[0])), cv2.FONT_HERSHEY_COMPLEX, 0.6, (0, 255, 0), 2)
+        # print hue
+        # cv2.putText(detectionOverlay, f"Hue: {meanHue}", tuple(map(int, rect[0])), cv2.FONT_HERSHEY_COMPLEX, 0.6, (0, 255, 0), 2)
+        # # print area
+        # cv2.putText(detectionOverlay, f"Area: {area}", tuple(map(int, rect[0])), cv2.FONT_HERSHEY_COMPLEX, 0.6, (0, 255, 0), 2)
+        # # print ratio
+        # cv2.putText(detectionOverlay, f"Ratio: {ratio}", tuple(map(int, rect[0])), cv2.FONT_HERSHEY_COMPLEX, 0.6, (0, 255, 0), 2)
+        #     # // print center
+        # cv2.putText(detectionOverlay, f"({int(realPoint[0])}, {int(realPoint[1])}), {angle}", tuple(map(int, rect[0])), cv2.FONT_HERSHEY_COMPLEX, 0.6, (0, 255, 0), 2)
+
 
         # Print the number of sides
-        print(f'Contour with {len(approx)} sides')
+        # print(f'Contour with {len(approx)} sides')
 
         box = cv2.boxPoints(rect)
         box = np.int64(box)
         cv2.drawContours(rectImage, [box], 0, (0,255, 0), 2)
 
-        validContours.append(cnt)
+        validRects.append(cnt)
             
-    show("new contours", contourImage)
-    show("Rects", rectImage)
+    show("new contours", rectImage)
+    # show("Rects", rectImage)
+    # show("Detection overlay", detectionOverlay)
 
     threshContours = []
     # for cnt in validContours:
@@ -251,13 +229,13 @@ def doHomographyTransform(src):
             cv2.circle(points, (int(x), int(y)), 5, (0, 0, 255), -1)
     show("Points", points)
 
-    np_top_down_points = np.float32([[REF_CENTER_PIXELS[0], REF_CENTER_PIXELS[1]-PIXELS_PER_INCH * 5], [REF_CENTER_PIXELS[0]+PIXELS_PER_INCH*5, REF_CENTER_PIXELS[1]-PIXELS_PER_INCH*5],
-        [REF_CENTER_PIXELS[0], REF_CENTER_PIXELS[1]], [REF_CENTER_PIXELS[0]+PIXELS_PER_INCH*5, REF_CENTER_PIXELS[1]]])
+    np_top_down_points = np.float32([[BOTTOM_LEFT_PIXELS[0], BOTTOM_LEFT_PIXELS[1]-PIXELS_PER_INCH * DIST_BETWEEN_POINTS], [BOTTOM_LEFT_PIXELS[0]+PIXELS_PER_INCH*DIST_BETWEEN_POINTS, BOTTOM_LEFT_PIXELS[1]-PIXELS_PER_INCH*DIST_BETWEEN_POINTS],
+        [BOTTOM_LEFT_PIXELS[0], BOTTOM_LEFT_PIXELS[1]], [BOTTOM_LEFT_PIXELS[0]+PIXELS_PER_INCH*DIST_BETWEEN_POINTS, BOTTOM_LEFT_PIXELS[1]]])
     
     M = cv2.getPerspectiveTransform(np_img_points,
                                     np_top_down_points)
     
-    # each inch is 40 pixels
+    # each inch is 20 pixels
     top_down_size = (1920, 1080)  # (width, height)
     top_down_view = cv2.warpPerspective(src, M, top_down_size)
 
@@ -295,11 +273,11 @@ def compute_homography(K, R, camera_center):
     return H
 
 def getRealWorldCoords(centerx, centery):
-    refOffsetX = centerx-REF_CENTER_PIXELS[0]
-    refOffsetY = -(centery-REF_CENTER_PIXELS[1])
+    refOffsetX = centerx-BOTTOM_LEFT_PIXELS[0]
+    refOffsetY = -(centery-BOTTOM_LEFT_PIXELS[1])
 
-    inchOffsetX = REF_CENTER_INCHES[0]+refOffsetX/PIXELS_PER_INCH
-    inchOffsetY = REF_CENTER_INCHES[1]+refOffsetY/PIXELS_PER_INCH
+    inchOffsetX = BOTTOM_LEFT_INCHES[0]+refOffsetX/PIXELS_PER_INCH
+    inchOffsetY = BOTTOM_LEFT_INCHES[1]+refOffsetY/PIXELS_PER_INCH
     return (inchOffsetX, inchOffsetY)
 
 main()
