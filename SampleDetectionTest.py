@@ -10,16 +10,20 @@ BOTTOM_LEFT_INCHES = [-5.6, 13.0]
 DIST_BETWEEN_POINTS = 5.6
 np_img_points = np.float32([[853, 612], [1201, 612],
     [812, 947], [1287, 941]])
-ALLIANCE = 1
-RED_HUE_LOW = 150.0
-RED_HUE_HIGH = 12.0
-YELLOW_HUE_LOW = 12.0
-YELLOW_HUE_HIGH = 55.0
-BLUE_HUE_LOW = 80.0
-BLUE_HUE_HIGH = 150.0
+ALLIANCE = 2
+RED_HUE_LOW_RANGE_1 = 20.0
+RED_HUE_HIGH_RANGE_1 = 140.0
+RED_HUE_LOW_RANGE_2 = 48
+RED_HUE_HIGH_RANGE_2 = 100
+YELLOW_HUE_LOW = 40.0
+YELLOW_HUE_HIGH = 20.0
+BLUE_HUE_LOW = 110.0
+BLUE_HUE_HIGH = 120.0
+MIN_X = 13
+
 
 def main():
-    src = cv2.imread(r"images\6.25\1.jpg")
+    src = cv2.imread(r"images\6.25\9.jpg")
     if src is None:
         print("Error: image not loaded")
         
@@ -75,10 +79,11 @@ def main():
 
     pose = (0,0,0)
 
+
     for cnt in contours:
         area = cv2.contourArea(cnt)
-        if area < 900.0 or area > 2400.0:
-            continue
+        if area < 750.0 or area > 1650.0:
+           continue
 
         rect = cv2.minAreaRect(cnt)
 
@@ -93,8 +98,8 @@ def main():
         # Calculate the aspect ratio using the longer side divided by the shorter side
         ratio = max(width, height) / min(width, height)
 
-        if ratio < 1.6 or ratio > 3.0:
-            continue
+        if ratio < 1.55 or ratio > 3:
+           continue
 
         pts = cv2.boxPoints(rect)
 
@@ -122,13 +127,15 @@ def main():
 
 
 
-        print(f'Contour mean hue {meanHue}')
-        # if ALLIANCE == 0 and (BLUE_HUE_LOW < meanHue[0] < BLUE_HUE_HIGH):
-        #     print(f'Contour with hue {meanHue[0]} discarded!\n')
-        #     continue
-        # elif ALLIANCE == 1 and (meanHue[0] > RED_HUE_LOW or meanHue[0] < RED_HUE_HIGH):
-        #     print(f'Contour with hue {meanHue[0]} discarded!\n')
-        #     continue
+        print(f'Contour mean hue {meanHue[0]}')
+        if ALLIANCE == 0 and (BLUE_HUE_LOW < meanHue[0] < BLUE_HUE_HIGH):
+            print(f'Contour with hue {meanHue[0]} discarded!\n')
+            continue
+        elif ALLIANCE == 1 and (meanHue[0] < RED_HUE_LOW_RANGE_1 or meanHue[0] > RED_HUE_HIGH_RANGE_1 or (RED_HUE_LOW_RANGE_2 < meanHue[0] < RED_HUE_HIGH_RANGE_2)):
+            print(f'Contour with hue {meanHue[0]} discarded!\n')
+            continue
+
+
 
         # mask = np.zeros_like(transformed)
         # cv2.drawContours(mask,[cnt],0,255,-1)
@@ -142,14 +149,18 @@ def main():
 
         realPoint = getRealWorldCoords(centerx,centery)
 
+        if (MIN_X > realPoint[1]):
+            print(f'Contour with x {realPoint[1]} discarded!\n')
+            continue
+
 # print sat        
         #cv2.putText(rectImage, f"Sat: {int(meanSat[0])}", tuple(map(int, rect[0])), cv2.FONT_HERSHEY_COMPLEX, 0.6, (0, 255, 0), 2)
         # print hue
-        cv2.putText(rectImage, f"Hue: {int(meanHue[0])}", tuple(map(int, rect[0])), cv2.FONT_HERSHEY_COMPLEX, 0.6, (0, 255, 0), 2)
+        #cv2.putText(rectImage, f"Hue: {int(meanHue[0])}", tuple(map(int, rect[0])), cv2.FONT_HERSHEY_COMPLEX, 0.4, (0, 255, 0), 2)
         # # print area
-        # cv2.putText(detectionOverlay, f"Area: {area}", tuple(map(int, rect[0])), cv2.FONT_HERSHEY_COMPLEX, 0.6, (0, 255, 0), 2)
+        #cv2.putText(rectImage, f"Area: {int(area)}", tuple(map(int, rect[0])), cv2.FONT_HERSHEY_COMPLEX, 0.6, (0, 255, 0), 2)
         # # print ratio
-        # cv2.putText(detectionOverlay, f"Ratio: {ratio}", tuple(map(int, rect[0])), cv2.FONT_HERSHEY_COMPLEX, 0.6, (0, 255, 0), 2)
+        #cv2.putText(rectImage, f"Ratio: {round(ratio,2)}", tuple(map(int, rect[0])), cv2.FONT_HERSHEY_COMPLEX, 0.6, (0, 255, 0), 2)
         #     # // print center
         #cv2.putText(rectImage, f"({int(realPoint[0])}, {int(realPoint[1])}), {int(angle)}", tuple(map(int, rect[0])), cv2.FONT_HERSHEY_COMPLEX, 0.6, (0, 255, 0), 2)
 
